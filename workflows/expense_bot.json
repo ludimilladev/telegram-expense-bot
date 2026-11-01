@@ -1,0 +1,493 @@
+{
+  "name": "Bot de gastos",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {
+          "chatIds": "SEU_CHAT_ID"
+        }
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "062fe399-d773-45c7-8ac6-448b5b1f3921",
+      "name": "Telegram Trigger",
+      "webhookId": "eea8d46a-54dc-446b-997e-bccd373f6ee8",
+      "credentials": {
+        "telegramApi": {
+          "id": "BN5ZttqXkldZjxPx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message.text }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Você extrai dados de gastos pessoais de mensagens curtas em português. Analise SOMENTE a mensagem recebida.\n\nResponda somente com um objeto JSON, sem blocos de código e sem texto antes ou depois, com exatamente estes campos:\n- descricao: copie o que foi comprado exatamente como a pessoa escreveu, sem corrigir nem trocar letras ou acentos. Apenas coloque a primeira letra maiúscula.\n- valor: número em reais com ponto decimal (\"23,90\" vira 23.9 e \"1.250,00\" vira 1250).\n- categoria: exatamente uma destas: Alimentação, Transporte, Lazer, Moradia, Saúde,Compras,Educação,Outros.\n- valido: true ou false.\n\nRegras:\n- valido é true apenas se a mensagem diz o que foi comprado E informa um valor em reais. Se houver só verbo e valor, sem dizer o que foi (como \"gastei 35\" ou \"paguei 20\"), valido é false.\n- Se valido for false, use descricao \"\", valor 0 e categoria \"Outros\".\n- Nunca invente informações que não estão na mensagem.\n\nExemplos:\nMensagem: farmácia 48,50\nResposta: {\"descricao\":\"Farmácia\",\"valor\":48.5,\"categoria\":\"Saúde\",\"valido\":true}\n\nMensagem: paguei 62 numa pizza\nResposta: {\"descricao\":\"Pizza\",\"valor\":62,\"categoria\":\"Alimentação\",\"valido\":true}\n\nMensagem: bom dia, tudo bem?\nResposta: {\"descricao\":\"\",\"valor\":0,\"categoria\":\"Outros\",\"valido\":false}\n\nMensagem: gastei muito hoje\nResposta: {\"descricao\":\"\",\"valor\":0,\"categoria\":\"Outros\",\"valido\":false}\n\nMensagem: gastei 35\nResposta: {\"descricao\":\"\",\"valor\":0,\"categoria\":\"Outros\",\"valido\":false}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        224,
+        0
+      ],
+      "id": "d83371c7-65bb-4de2-aeb3-0cd9e52e56a8",
+      "name": "Basic LLM Chain",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=✅ Salvei: {{ $('Interpretar resposta').item.json.output.descricao }} | {{ $('Interpretar resposta').item.json.output.valor }} | {{ $('Interpretar resposta').item.json.output.categoria }}\n📊 Total do mês: {{ $('soma o total do mes').first().json.total_formatado }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1744,
+        -32
+      ],
+      "id": "dea29dcb-8adb-4eca-9284-a57f6f18ff59",
+      "name": "mensagem valida",
+      "webhookId": "c18be43a-5ec1-4b91-9e9d-69569505adf9",
+      "credentials": {
+        "telegramApi": {
+          "id": "BN5ZttqXkldZjxPx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "b1942d6c-a883-4856-aa18-7bb2faa1a6e6",
+              "leftValue": "={{ $json.output.valido }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "a0b502da-178c-464a-abbf-89fa64920488",
+              "leftValue": "={{ $('Telegram Trigger').item.json.message.text }}",
+              "rightValue": "\\d",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            },
+            {
+              "id": "63f22625-ccb4-449b-9720-48537c56fd3b",
+              "leftValue": "={{ !['', 'gasto', 'gastos', 'compra', 'pagamento'].includes($json.output.descricao.toLowerCase().trim()) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        704,
+        -16
+      ],
+      "id": "2a1dafa7-f37a-46dd-be9e-e9f9b7488ba0",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=Não entendi 🤔 Me mande assim: \"gastei 35 no almoço\" ou \"uber 23,90\".",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        912,
+        224
+      ],
+      "id": "f3043657-8393-4c81-80f9-d5fc7e1f729b",
+      "name": "Descrever melhor o gasto",
+      "webhookId": "c18be43a-5ec1-4b91-9e9d-69569505adf9",
+      "credentials": {
+        "telegramApi": {
+          "id": "BN5ZttqXkldZjxPx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "ID_DA_PLANILHA",
+          "mode": "list",
+          "cachedResultName": "Controle de gastos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DA_PLANILHA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DA_PLANILHA/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Data": "={{ $now.toFormat('dd/MM/yyyy HH:mm') }}",
+            "Descricao": "={{ $('Interpretar resposta').item.json.output.descricao }}",
+            "Valor": "={{ $('Interpretar resposta').item.json.output.valor }}",
+            "Categoria": "={{ $('Interpretar resposta').item.json.output.categoria }}",
+            "Total do Mes": "={{ $json.total_formatado }}",
+            "Mes": "={{ $now.toFormat('yyyy-MM') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Data",
+              "displayName": "Data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Descricao",
+              "displayName": "Descricao",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Valor",
+              "displayName": "Valor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Categoria",
+              "displayName": "Categoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Mes",
+              "displayName": "Mes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total do Mes",
+              "displayName": "Total do Mes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1456,
+        -32
+      ],
+      "id": "8a47899c-c1d1-4130-815f-a9d59f0abd57",
+      "name": "Salva gastos na planilha",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JK7uf5X7m0XXPdyt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=Algo deu errado, tente de novo em instantes",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        672,
+        352
+      ],
+      "id": "e8acb907-c4cc-4776-9b6a-6d864c2a0436",
+      "name": "mensagem de erro",
+      "webhookId": "c18be43a-5ec1-4b91-9e9d-69569505adf9",
+      "credentials": {
+        "telegramApi": {
+          "id": "BN5ZttqXkldZjxPx",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "ID_DA_PLANILHA",
+          "mode": "list",
+          "cachedResultName": "Controle de gastos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DA_PLANILHA/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/ID_DA_PLANILHA/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Mes",
+              "lookupValue": "={{ $now.toFormat('yyyy-MM') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        944,
+        -32
+      ],
+      "id": "0dac35a2-558d-4996-a686-54da7100b08e",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JK7uf5X7m0XXPdyt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function paraNumero(v) {\n  if (typeof v === 'number') return v;\n  let s = String(v ?? '').replace('R$', '').trim();\n  if (s.includes(',')) s = s.replace(/\\./g, '').replace(',', '.');\n  const n = Number(s);\n  return Number.isFinite(n) ? n : 0;\n}\n\nconst novo = $('If').first().json.output.valor;\n\n// ignora o item vazio que \"Always Output Data\" cria quando não acha nada\nconst linhas = $input.all().filter(item => Object.keys(item.json).length > 0);\n\nconst totalAnterior = linhas.reduce((soma, item) => {\n  const bruto = item.json.valor ?? item.json.Valor;\n  return soma + paraNumero(bruto);\n}, 0);\n\nconst total = Math.round((totalAnterior + paraNumero(novo)) * 100) / 100;\n\nreturn [{\n  json: {\n    total_mes: total,\n    total_formatado: total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),\n    linhas_lidas: linhas.length,\n    total_anterior: totalAnterior,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        -32
+      ],
+      "id": "6308f867-2f33-42df-bc4c-a002ef1c81a2",
+      "name": "soma o total do mes"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        112,
+        208
+      ],
+      "id": "f7ec64f9-4ca1-41a8-9ac6-5720cd388ea4",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "9H7kcQaUBAJBi9vP",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const categorias = ['Alimentação', 'Transporte', 'Lazer', 'Moradia', 'Saúde','Compras','Educação', 'Outros'];\nconst invalido = { descricao: '', valor: 0, categoria: 'Outros', valido: false };\nconst semAcento = (s) => String(s ?? '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n\n// 1) lê o JSON que o modelo devolveu\nlet bruto = String($json.text ?? '').replace(/```json|```/gi, '').trim();\nconst ini = bruto.indexOf('{');\nconst fim = bruto.lastIndexOf('}');\n\nlet dados = invalido;\ntry {\n  if (ini !== -1 && fim > ini) dados = JSON.parse(bruto.slice(ini, fim + 1));\n} catch (e) {\n  dados = invalido;\n}\n\n// 2) descrição: usa a grafia que a pessoa digitou\nconst msg = String($('Telegram Trigger').item.json.message.text ?? '');\nlet descricao = String(dados.descricao ?? '').trim();\nconst msgBase = semAcento(msg);\nconst descBase = semAcento(descricao);\nif (descBase && msgBase.length === msg.length) {\n  const pos = msgBase.indexOf(descBase);\n  if (pos !== -1) descricao = msg.slice(pos, pos + descBase.length).trim();\n}\ndescricao = descricao.charAt(0).toUpperCase() + descricao.slice(1);\n\n// 3) categoria: aceita com ou sem acento\nconst categoria = categorias.find((c) => semAcento(c) === semAcento(dados.categoria)) ?? 'Outros';\n\n// 4) valor e validade\nconst valor = Number(dados.valor);\n\nreturn {\n  json: {\n    output: {\n      descricao,\n      valor: Number.isFinite(valor) ? valor : 0,\n      categoria,\n      valido: dados.valido === true,\n    },\n  },\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        -16
+      ],
+      "id": "bd9b612a-ed28-46ee-984d-eac74f567e09",
+      "name": "Interpretar resposta"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Interpretar resposta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "mensagem de erro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Descrever melhor o gasto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salva gastos na planilha": {
+      "main": [
+        [
+          {
+            "node": "mensagem valida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "soma o total do mes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "soma o total do mes": {
+      "main": [
+        [
+          {
+            "node": "Salva gastos na planilha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Interpretar resposta": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "8ad914a5-4e7a-4b7d-9c92-9218d9153b37",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8ba30d39c7446a16ba5ed150bad48c43b8c357be0f7778e1b27c134009a39a50"
+  },
+  "nodeGroups": [],
+  "id": "gfVQY6voMzf9afPt",
+  "tags": []
+}
