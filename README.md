@@ -4,7 +4,7 @@ Bot do Telegram que registra gastos a partir de frases em linguagem natural. Voc
 
 Construído com **n8n**, **Docker Compose** e um modelo de IA que pode ser trocado (testado com OpenAI e com **Ollama** rodando localmente, sem custo de API).
 
-> **Demo:** `[PREENCHER: adicionar docs/demo.gif]`
+> **Demo:**
 >
 > ![Demo do bot](./docs/expense-bot-new-demo.gif)
 
