@@ -1,5 +1,7 @@
 # Telegram Expense Bot
 
+🇺🇸 **[Read in English](./README.en.md)**
+
 Bot do Telegram que registra gastos a partir de frases em linguagem natural. Você escreve "gastei 35 no almoço", a IA extrai descrição, valor e categoria, o fluxo grava uma linha no Google Sheets e o bot confirma no chat, já mostrando o **total gasto no mês**.
 
 Construído com **n8n**, **Docker Compose** e um modelo de IA que pode ser trocado (testado com OpenAI e com **Ollama** rodando localmente, sem custo de API).
@@ -64,8 +66,8 @@ Medição informal em 31/10/2026, com 6 gastos fictícios (uber, mercado, netfli
 
 O bot foi mais rápido nos 6 casos, com cerca de 9 segundos a menos por registro (aproximadamente 43% menos tempo).
 
-- **Qualidade da extração:** `[6 de 6 gastos gravados corretamente]`.
-- **Mensagens inválidas recusadas:** `[4 de 4]` (`oi, tudo bem?`, `gastei muito hoje`, `gastei 35` e `comprei 3 coisas`).
+- **Qualidade da extração:** 6 de 6 gastos gravados corretamente.
+- **Mensagens inválidas recusadas:** 4 de 4 (`oi, tudo bem?`, `gastei muito hoje`, `gastei 35` e `comprei 3 coisas`).
 
 ### Falhas encontradas nos testes e como foram corrigidas
 
